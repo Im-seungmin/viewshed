@@ -169,10 +169,12 @@ const settings = {
   interval: 100, // m
   observerHeight: 1.7, // m
   analyze: () => runAnalysis(),
+  record: () => toggleRecording(),
 };
 
 const ui = {
   analyzeBtn: null, // lil-gui controller
+  recordBtn: null, // lil-gui controller
   contextMenu: document.getElementById('context-menu'),
   createMarkerBtn: document.getElementById('create-marker-btn'),
   clearLogBtn: document.getElementById('clear-log-btn'),
@@ -337,6 +339,59 @@ function reveal(s, visible) {
   log(`가시화 완료 — 가시 ${visibleCount} / ${total} 셀 (${((visibleCount / total) * 100).toFixed(1)}%)`, 'success');
 }
 
+// ───────────────────────────── 6.5 화면 녹화 ─────────────────────────────
+/**
+ * 탭 화면을 webm 으로 녹화한다 (getDisplayMedia + MediaRecorder).
+ * 지도·오버레이·마커·UI 가 보이는 그대로 담긴다. 중지하면 파일 다운로드.
+ */
+const recorder = { media: null, chunks: [], stream: null };
+
+async function startRecording() {
+  const stream = await navigator.mediaDevices.getDisplayMedia({
+    video: { frameRate: 30 },
+    audio: false,
+    preferCurrentTab: true, // Chrome: 선택 창에서 현재 탭을 기본 제안
+    selfBrowserSurface: 'include',
+  });
+  const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((t) => MediaRecorder.isTypeSupported(t));
+  recorder.stream = stream;
+  recorder.chunks = [];
+  recorder.media = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+  recorder.media.ondataavailable = (e) => e.data.size && recorder.chunks.push(e.data);
+  recorder.media.onstop = saveRecording;
+  stream.getVideoTracks()[0].addEventListener('ended', stopRecording); // 브라우저 "공유 중지" 버튼 대응
+  recorder.media.start(1000);
+  ui.recordBtn.name('■ 녹화 중지');
+  document.body.classList.add('recording');
+  log('녹화 시작');
+}
+
+function stopRecording() {
+  if (recorder.media?.state === 'recording') recorder.media.stop();
+  recorder.stream?.getTracks().forEach((t) => t.stop());
+  recorder.media = null;
+  ui.recordBtn.name('● 녹화 시작');
+  document.body.classList.remove('recording');
+}
+
+function saveRecording() {
+  const blob = new Blob(recorder.chunks, { type: 'video/webm' });
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '');
+  const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `viewshed-${stamp}.webm` });
+  a.click();
+  URL.revokeObjectURL(a.href);
+  log(`녹화 저장 — ${a.download} (${(blob.size / 1048576).toFixed(1)} MB)`, 'success');
+}
+
+async function toggleRecording() {
+  if (recorder.media) return stopRecording();
+  try {
+    await startRecording();
+  } catch (err) {
+    if (err.name !== 'NotAllowedError') log(`녹화 실패: ${err.message}`, 'error'); // 사용자가 취소한 경우는 조용히
+  }
+}
+
 // ───────────────────────────── 7. 설정 패널 / UI 이벤트 ─────────────────────────────
 /** 우상단 설정 패널 (lil-gui) */
 function buildGui() {
@@ -353,6 +408,7 @@ function buildGui() {
   analysisFolder.add(settings, 'interval', 5, 1000, 5).name('분석 범위내 간격 (m)').onChange(refreshPreview);
   analysisFolder.add(settings, 'observerHeight', 0, 100, 0.1).name('관측자 높이 (m)');
   ui.analyzeBtn = gui.add(settings, 'analyze').name('분석 시작').disable();
+  ui.recordBtn = gui.add(settings, 'record').name('● 녹화 시작');
 }
 
 function hideContextMenu() {
