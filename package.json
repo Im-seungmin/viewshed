@@ -1,0 +1,9 @@
+{
+  "name": "viewshed",
+  "private": true,
+  "scripts": {
+    "env": "node scripts/build-env.js",
+    "dev": "node scripts/build-env.js && npx -y serve -l 5500 .",
+    "build": "node scripts/build-env.js"
+  }
+}

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Viewshed - MapLibre + Pixi.js</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@6.14.0/dist/maplibre-gl.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="map-wrap">
+    <div id="map"></div>
+    <div id="overlay"></div>
+    <div id="gui"></div>
+
+    <ul id="legend">
+      <li><i class="swatch visible"></i>가시</li>
+      <li><i class="swatch hidden"></i>비가시</li>
+      <li><i class="swatch preview"></i>미리보기</li>
+    </ul>
+
+    <div id="context-menu"><button id="create-marker-btn">기준점 지정</button></div>
+  </div>
+
+  <section id="log-panel">
+    <header>
+      <h2>로그</h2>
+      <div class="progress"><div id="progress-bar"></div></div>
+      <span id="progress-text">대기 중</span>
+      <button id="clear-log-btn" title="로그 지우기">지우기</button>
+    </header>
+    <div id="log"></div>
+  </section>
+
+  <!-- 환경 변수 (API 키). scripts/build-env.js 가 .env 로부터 생성, git 추적 제외 -->
+  <script src="env.js"></script>
+
+  <!-- 라이브러리는 app.js 안에서 ES 모듈(.mjs)로 import (MapLibre 6.x 공식 방식). 로컬 서버 필요 -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
